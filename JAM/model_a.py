@@ -6,10 +6,11 @@
 
 import numpy as np
 import pickle
-from emcee import EnsembleSampler
-from emcee.utils import MPIPool
+import emcee
+from schwimmbad import MPIPool
 import time
 from jampy.jam_axi_proj import jam_axi_proj
+import sys
 
 def load_data(pickle_file):
     """Load data from a pickle file."""
@@ -99,7 +100,7 @@ def log_probability(params, d, boundaries):
         return -np.inf
     return ln_prior + log_likelihood(params, d, boundaries)
 
-def run_mcmc(pickle_file, n_walkers=32, n_steps=1000, burnin=200):
+def run_mcmc(pickle_file, n_walkers=32, n_steps=1000, burnin=200, save_path="/fred/oz059/olivia/NGC5102_samples.pkl"):
     """Run MCMC for Model A with MPI parallelization."""
     # Load data
     d = load_data(pickle_file)
@@ -135,30 +136,30 @@ def run_mcmc(pickle_file, n_walkers=32, n_steps=1000, burnin=200):
     print("Running production...")
     sampler.run_mcmc(p0, n_steps, progress=True)
 
-    # Close the MPI pool
+    # Save the samples and metadata to a pickle file
+    samples = sampler.get_chain(flat=True)
+    metadata = {
+        "parameters": ["beta", "cosinc", "ml", "mbh"],
+        "burnin": burnin,
+        "n_walkers": n_walkers,
+        "n_steps": n_steps,
+    }
+    with open(save_path, "wb") as f:
+        pickle.dump({"samples": samples, "metadata": metadata}, f)
+
+    print(f"Samples and metadata saved to {save_path}")
     pool.close()
-
-    return sampler.get_chain(flat=True)
-
-def plot_mcmc(samples):
-    """Plot MCMC results."""
-    import matplotlib.pyplot as plt
-    import corner
-
-    labels = ["Beta", "CosInc", "M/L", "Mbh"]
-    fig = corner.corner(samples, labels=labels, show_titles=True)
-    plt.show()
 
 if __name__ == "__main__":
     # Path to the pickle file
-    pickle_file_path = "/path/to/kwargs.pkl"  # Update with your actual path
+    pickle_file_path = "/home/osilcock/DM_data/kwargs.pkl"
 
     # Run MCMC with reduced steps for testing
     n_walkers = 16
     n_steps = 500
     burnin = 100
+    save_path = "/fred/oz059/olivia/NGC5102_samples.pkl"
 
     print("Starting MCMC for Model A with MPI...")
-    samples = run_mcmc(pickle_file_path, n_walkers=n_walkers, n_steps=n_steps, burnin=burnin)
-    print("MCMC complete. Plotting results...")
-    plot_mcmc(samples)
+    run_mcmc(pickle_file_path, n_walkers=n_walkers, n_steps=n_steps, burnin=burnin, save_path=save_path)
+    print("MCMC complete and samples saved.")
