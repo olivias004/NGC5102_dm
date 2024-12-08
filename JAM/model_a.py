@@ -124,7 +124,7 @@ def run_mcmc(output_path, ndim=4, nwalkers=20, nsteps=5000):
 # MAIN EXECUTION ===================================
 if __name__ == "__main__":
     # CONSTANTS
-    location = "local"  # Change to "server" if running on the server
+    location = "server"  # Change to "server" if running on the server
     ndim = 4
     nwalkers = 20
     nsteps = 45
