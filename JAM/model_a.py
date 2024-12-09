@@ -9,7 +9,6 @@ import pickle
 import emcee
 from schwimmbad import MPIPool
 from jampy.jam_axi_proj import jam_axi_proj
-import sys
 
 def load_data(pickle_file):
     """Load data from a pickle file."""
@@ -127,13 +126,10 @@ def run_mcmc(pickle_file, n_walkers=32, n_steps=500, burnin=100, save_path="/fre
     )
 
     # Burn-in phase
-    print("Running burn-in...")
-    p0, _, _ = sampler.run_mcmc(p0, burnin, progress=True)
-    sampler.reset()
+    p0, _, _ = sampler.run_mcmc(p0, burnin)
 
     # Production phase
-    print("Running production...")
-    sampler.run_mcmc(p0, n_steps, progress=True)
+    sampler.run_mcmc(p0, n_steps)
 
     # Save the samples and metadata to a pickle file
     samples = sampler.get_chain(flat=True)
@@ -146,7 +142,6 @@ def run_mcmc(pickle_file, n_walkers=32, n_steps=500, burnin=100, save_path="/fre
     with open(save_path, "wb") as f:
         pickle.dump({"samples": samples, "metadata": metadata}, f)
 
-    print(f"Samples and metadata saved to {save_path}")
     pool.close()
 
 if __name__ == "__main__":
@@ -159,6 +154,5 @@ if __name__ == "__main__":
     burnin = 100
     save_path = "/fred/oz059/olivia/NGC5102_samples.pkl"
 
-    print("Starting MCMC for Model A with MPI...")
     run_mcmc(pickle_file_path, n_walkers=n_walkers, n_steps=n_steps, burnin=burnin, save_path=save_path)
-    print("MCMC complete and samples saved.")
+
