@@ -123,7 +123,7 @@ def run_mcmc(pickle_file, n_walkers=32, n_steps=1000, burnin=200, save_path="/fr
         return
 
     # Set up the MCMC sampler
-    sampler = EnsembleSampler(
+    sampler = emcee.EnsembleSampler(
         n_walkers, ndim, log_probability, args=(d, boundaries), pool=pool
     )
 
