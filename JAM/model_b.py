@@ -133,7 +133,7 @@ def run_mcmc(output_path, ndim=4, nwalkers=20, nsteps=5000):
 if __name__ == "__main__":
     # CONSTANTS
     ndim = 4
-    nwalkers = 5
+    nwalkers = 8
     nsteps = 100
 
     # Paths
