@@ -187,4 +187,4 @@ if __name__ == "__main__":
 
     # Run MCMC
     output_path = "/fred/oz059/olivia/NGC5102_samples.pkl"
-    run_mcmc(output_path, d, n_walkers=8, n_steps=100, burnin=50)
+    run_mcmc(output_path, d, n_walkers=20, n_steps=500, burnin=100)
