@@ -8,7 +8,6 @@ import numpy as np
 import pickle
 import emcee
 from schwimmbad import MPIPool
-import time
 from jampy.jam_axi_proj import jam_axi_proj
 import sys
 
@@ -100,7 +99,7 @@ def log_probability(params, d, boundaries):
         return -np.inf
     return ln_prior + log_likelihood(params, d, boundaries)
 
-def run_mcmc(pickle_file, n_walkers=32, n_steps=1000, burnin=200, save_path="/fred/oz059/olivia/NGC5102_samples.pkl"):
+def run_mcmc(pickle_file, n_walkers=32, n_steps=500, burnin=100, save_path="/fred/oz059/olivia/NGC5102_samples.pkl"):
     """Run MCMC for Model A with MPI parallelization."""
     # Load data
     d = load_data(pickle_file)
@@ -155,7 +154,7 @@ if __name__ == "__main__":
     pickle_file_path = "/home/osilcock/DM_data/kwargs.pkl"
 
     # Run MCMC with reduced steps for testing
-    n_walkers = 16
+    n_walkers = 8
     n_steps = 500
     burnin = 100
     save_path = "/fred/oz059/olivia/NGC5102_samples.pkl"
