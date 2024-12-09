@@ -11,6 +11,9 @@ from schwimmbad import MPIPool
 import sys
 from jampy.jam_axi_proj import jam_axi_proj
 
+# Minimum axial ratio
+QMIN = 0.05
+
 
 def jam_lnprob(params):
     """
@@ -29,6 +32,11 @@ def jam_lnprob(params):
 
         # Convert inclination to cos(inclination)
         cosinc = np.cos(np.radians(inc))
+
+        # Calculate minimum observed axial ratio for this inclination
+        q_obs_min = np.sqrt(cosinc ** 2 + (QMIN * np.sin(np.radians(inc))) ** 2)
+        if not np.all(d["qObs_lum"] >= q_obs_min):
+            return -np.inf  # Reject sample if inclination is too low
 
         # Run JAM model
         jam = jam_axi_proj(
@@ -74,7 +82,10 @@ def run_mcmc(output_path, ndim=4, nwalkers=20, nsteps=500):
         nsteps (int): Number of steps.
     """
     # Starting point for walkers
-    p0 = [[87.5, 0.0, 1.0, 2.55] + 0.5 * np.random.randn(ndim) for _ in range(nwalkers)]
+    p0 = [
+        [87.5, 0.0, 1.0, 2.55] + 0.5 * np.random.randn(ndim)
+        for _ in range(nwalkers)
+    ]
 
     with MPIPool() as pool:
         if not pool.is_master():
@@ -102,6 +113,4 @@ if __name__ == "__main__":
     ndim = 4
 
     # Run MCMC
-    print("Starting MCMC...")
     run_mcmc(output_path, ndim=ndim, nwalkers=nwalkers, nsteps=nsteps)
-    print("MCMC completed. Results saved.")
