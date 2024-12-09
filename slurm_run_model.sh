@@ -1,3 +1,6 @@
+#!/bin/bash
+
+
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=20
 #SBATCH --job-name=initial_chain
@@ -12,5 +15,5 @@ ml gcc/12.2.0
 ml openmpi/4.1.4
 source activate NGC5102
 
-mpirun -n 20  python NGC5102_JAM.py
+mpirun -n 20  python JAM/model_a.py
 
