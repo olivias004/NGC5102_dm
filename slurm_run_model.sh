@@ -9,7 +9,7 @@
 #SBATCH --time=10:00:00
 #SBATCH --account=oz059
 
-module purge
+module --force purge
 module load gcc/12.2.0
 module load openmpi/4.1.4
 source activate NGC5102
