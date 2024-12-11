@@ -17,7 +17,7 @@ def param(pars):
     inc, beta, mbh, logalpha = pars
 
     # Define boundaries
-    inc_bounds = [70, 90]           # Inclination (degrees)
+    inc_bounds = [80, 90]           # Inclination (degrees)
     beta_bounds = [-0.99, 0.99]     # Anisotropy parameter beta
     mbh_bounds = [0.8, 1.2]         # Black hole mass scaling
     logalpha_bounds = [-0.5, 0.5]   # IMF scaling parameter logalpha
@@ -40,7 +40,7 @@ def priors(pars):
 
     # Define priors
     priors_dict = {
-        "inc": [80, 5],         # Mean 80, sigma 5 for inclination
+        "inc": [85, 5],         # Mean 80, sigma 5 for inclination
         "beta": [0.0, 0.5],     # Mean 0, sigma 0.5 for beta
         "mbh": [1.0, 0.1],      # Mean 1.0, sigma 0.1 for black hole scaling
         "logalpha": [0.0, 0.2], # Mean 0.0, sigma 0.2 for IMF scaling
@@ -133,12 +133,12 @@ def run_mcmc(output_path, ndim=4, nwalkers=20, nsteps=5000):
 if __name__ == "__main__":
     # CONSTANTS
     ndim = 4
-    nwalkers = 8
-    nsteps = 100
+    nwalkers = 12
+    nsteps = 1000
 
     # Paths
     data_path = "/home/osilcock/DM_data/kwargs.pkl"
-    output_path = "/fred/oz059/olivia/NGC5102_samples_modelB.pkl"
+    output_path = "/fred/oz059/olivia/Model_B.pkl"
 
     # Load input data
     with open(data_path, "rb") as f:
