@@ -1,115 +1,63 @@
+# IMPORTS
 import numpy as np
 import pickle
 import emcee
-from schwimmbad import MPIPool
+import matplotlib.pyplot as plt
 from jampy.jam_axi_proj import jam_axi_proj
-import sys
-from scipy.optimize import minimize
+from time import time
 
-# ------------------ FUNCTIONS ----------------------
-
+# FUNCTIONS ===================
 # Parameter boundaries
-boundary = {
-    "inc": [70, 90],        # Inclination (degrees)
-    "beta": [-0.99, 0.99],  # Anisotropy parameter beta
-    "mbh": [0.8, 1.2],      # Black hole mass scaling
-    "ml": [0.5, 5.0],       # Mass-to-light ratio
-}
+def param(pars):
+    inc, beta, mbh, ml = pars
+    inc_bounds = [70, 90]       # Inclination (degrees)
+    beta_bounds = [-0.5, 0.5]   # Adjusted beta bounds
+    mbh_bounds = [0.8, 1.2]     # Black hole mass scaling
+    ml_bounds = [0.5, 5.0]      # Mass-to-light ratio
 
-# Parameter priors (Gaussian)
-prior = {
-    "inc": [80, 5],  # Mean 80, sigma 5
-    "beta": [0.0, 0.5],  # Mean 0, sigma 0.5
-    "mbh": [1.0, 0.1],  # Mean 1.0, sigma 0.1
-    "ml": [2.0, 1.0],  # Mean 2.0, sigma 1.0
-}
+    if (inc_bounds[0] <= inc <= inc_bounds[1] and
+        beta_bounds[0] <= beta <= beta_bounds[1] and
+        mbh_bounds[0] <= mbh <= mbh_bounds[1] and
+        ml_bounds[0] <= ml <= ml_bounds[1]):
+        return True
+    return False
 
-def check_boundary(pars):
-    """Check if parameters are within boundaries."""
-    keys = list(boundary.keys())
-    for i, key in enumerate(keys):
-        if not (boundary[key][0] <= pars[i] <= boundary[key][1]):
-            return False
-    return True
-
-def lnprior(pars):
-    """Compute Gaussian priors."""
-    ln_prior = 0.0
-    for i, (key, (mean, sigma)) in enumerate(prior.items()):
-        ln_prior += -0.5 * ((pars[i] - mean) / sigma) ** 2
+# Priors
+def priors(pars):
+    inc, beta, mbh, ml = pars
+    priors_dict = {"inc": [80, 5], "beta": [0.0, 0.2], "mbh": [1.0, 0.1], "ml": [2.0, 0.5]}
+    ln_prior = sum(-0.5 * ((value - mean) / sigma) ** 2 for value, (mean, sigma) in zip(pars, priors_dict.values()))
     return ln_prior
 
+# JAM likelihood function
 def jam_lnprob(pars):
-    """Log-probability combining priors and likelihood."""
-    # Check parameter boundaries
-    if not check_boundary(pars):
-        return -np.inf
-
-    # Compute priors
-    ln_prior_val = lnprior(pars)
-    if not np.isfinite(ln_prior_val):
-        return -np.inf
-
-    # Unpack parameters
+    if not param(pars): return -np.inf
     inc, beta, mbh, ml = pars
+    ln_prior = priors(pars)
+    if not np.isfinite(ln_prior): return -np.inf
 
-    # Run JAM model
     try:
+        # Run JAM model
         jam = jam_axi_proj(
-            d["surf_lum"],
-            d["sigma_lum"],
-            d["qObs_lum"],
-            d["surf_pot"] * ml,
-            d["sigma_pot"],
-            d["qObs_pot"],
-            inc,
-            mbh * d["bhm"],
-            d["dist"],
-            d["rot_x"],
-            d["rot_y"],
-            align="cyl",
-            moment="zz",
-            plot=False,
-            pixsize=d["pixsize"],
-            quiet=1,
-            sigmapsf=d["sigmapsf"],
-            normpsf=d["normpsf"],
-            goodbins=d["goodbins"],
-            beta=np.full_like(d["qObs_lum"], beta),
-            data=d["rms"],
-            errors=d["erms"],
+            d["surf_lum"], d["sigma_lum"], d["qObs_lum"], 
+            d["surf_pot"] * ml, d["sigma_pot"], d["qObs_pot"],
+            inc, mbh * d["bhm"], d["dist"], d["rot_x"], d["rot_y"],
+            align="cyl", moment="zz", plot=False, pixsize=d["pixsize"],
+            quiet=1, sigmapsf=d["sigmapsf"], normpsf=d["normpsf"], 
+            goodbins=d["goodbins"], beta=np.full_like(d["qObs_lum"], beta),
+            data=d["rms"], errors=d["erms"]
         )
+
+        if not np.isfinite(jam.chi2):
+            return -np.inf  # Safeguard against bad outputs
     except Exception as e:
-        print(f"Error in JAM: {e}")
+        print(f"JAM failed: {e}")
         return -np.inf
 
-    # Compute likelihood (Chi-squared)
     chi2 = -0.5 * jam.chi2 * len(d["rms"])
+    return ln_prior + chi2
 
-    # Combine prior and likelihood
-    return ln_prior_val + chi2
-
-def run_mcmc(output_path, ndim=4, nwalkers=10, nsteps=100):
-    """Run MCMC sampling with emcee."""
-    # Initialize walkers around a starting point
-    p0 = [
-        [80.0, 0.0, 1.0, 2.0] + 0.01 * np.random.randn(ndim) for _ in range(nwalkers)
-    ]
-
-    with MPIPool() as pool:
-        if not pool.is_master():
-            pool.wait()
-            sys.exit(0)
-
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, jam_lnprob, pool=pool)
-        sampler.run_mcmc(p0, nsteps, progress=True)
-
-    # Save sampler output
-    with open(output_path, "wb") as f:
-        pickle.dump(sampler, f)
-
-    return sampler
-
+# MAIN ===========================
 # ------------------ MAIN SCRIPT -------------------
 if __name__ == "__main__":
     # CONSTANTS
@@ -136,3 +84,6 @@ if __name__ == "__main__":
     flat_samples = sampler.get_chain(discard=10, thin=5, flat=True)
     medians = np.median(flat_samples, axis=0)
     print(f"Median parameters: inc={medians[0]:.2f}, beta={medians[1]:.2f}, mbh={medians[2]:.2f}, ml={medians[3]:.2f}")
+
+
+

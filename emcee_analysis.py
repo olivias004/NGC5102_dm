@@ -17,8 +17,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 tau0 = [35.67234921, 33.97927069, 39.61699091, 42.27054764]
 labels = ["inclination", "anisotropy", "black hole mass", "mass to light ratio"]
 
-output_path = '/Users/livisilcock/Documents/PROJECTS/NGC5102/files/Model_A/'
-NGC5102_samples = output_path + 'samples.pkl'
+output_path = '/Users/livisilcock/Documents/PROJECTS/NGC5102/files/Model_B/'
+NGC5102_samples = output_path + 'NGC5102_samples_test.pkl'
+
 
 #FUNCTIONS=======================================
 #determine chi2
