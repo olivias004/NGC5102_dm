@@ -1,4 +1,3 @@
-# IMPORTS =====================
 import numpy as np
 import pickle
 import emcee
@@ -79,24 +78,32 @@ def jam_lnprob(pars):
             data=d["rms"],
             errors=d["erms"],
         )
-    except Exception:
+    except Exception as e:
+        print(f"Error in JAM: {e}")
         return -np.inf
 
-    # Compute likelihood (Chi-squared normalized over good bins)
-    n_good_bins = len(d["goodbins"])
-    chi2 = -0.5 * np.sum((jam.model - d["rms"])**2 / d["erms"]**2) / n_good_bins
+    # Compute likelihood (Chi-squared normalized)
+    chi2 = ((jam.rms_model - d["rms"]) / d["erms"])**2
+    log_likelihood = -0.5 * np.sum(chi2)
 
     # Combine prior and likelihood
-    return ln_prior_val + chi2
+    return ln_prior_val + log_likelihood
 
-def run_mcmc(output_path, ndim=4, nwalkers=20, nsteps=200):
+def initialize_walkers(ndim, nwalkers):
+    """Initialize walkers around prior means with small random offsets."""
+    p0 = []
+    for _ in range(nwalkers):
+        walker = [
+            np.random.normal(prior[key][0], 0.1 * prior[key][1])  # Use small spread
+            for key in boundary.keys()
+        ]
+        p0.append(walker)
+    return np.array(p0)
+
+def run_mcmc(output_path, ndim=4, nwalkers=20, nsteps=500):
     """Run MCMC sampling with emcee."""
-    # Initialize walkers close to prior means
-    p0 = [
-        [prior["inc"][0], prior["beta"][0], prior["mbh"][0], prior["ml"][0]]
-        + 1e-2 * np.random.randn(ndim)
-        for _ in range(nwalkers)
-    ]
+    # Initialize walkers
+    p0 = initialize_walkers(ndim, nwalkers)
 
     print("Starting MCMC...")
     with MPIPool() as pool:
@@ -118,12 +125,12 @@ def run_mcmc(output_path, ndim=4, nwalkers=20, nsteps=200):
 if __name__ == "__main__":
     # CONSTANTS
     ndim = 4
-    nwalkers = 20  # Increased walkers for better sampling
-    nsteps = 200   # Small for testing, increase for convergence
+    nwalkers = 20  # Increased for better sampling
+    nsteps = 500   # Increased to improve convergence
 
     # Paths
     data_path = "/home/osilcock/DM_data/kwargs.pkl"
-    output_path = "/fred/oz059/olivia/NGC5102_samples_fixed.pkl"
+    output_path = "/fred/oz059/olivia/NGC5102_samples_test.pkl"
 
     # Load input data
     with open(data_path, "rb") as f:
@@ -132,8 +139,11 @@ if __name__ == "__main__":
     # Run MCMC
     sampler = run_mcmc(output_path, ndim, nwalkers, nsteps)
 
-    # Summary of results
-    print("MCMC completed. Saving results...")
-    flat_samples = sampler.get_chain(discard=20, thin=5, flat=True)
+    # Print summary of results
+    print("MCMC completed. Chain shape:", sampler.chain.shape)
+    print("Log-probability shape:", sampler.lnprobability.shape)
+
+    # Extract and print median parameters
+    flat_samples = sampler.get_chain(discard=50, thin=10, flat=True)
     medians = np.median(flat_samples, axis=0)
     print(f"Median parameters: inc={medians[0]:.2f}, beta={medians[1]:.2f}, mbh={medians[2]:.2f}, ml={medians[3]:.2f}")
