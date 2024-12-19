@@ -1,6 +1,6 @@
 import numpy as np
 import pickle
-from mcmc_pyjam import mcmc  # Importing the provided Mitzkus MCMC module
+from JAM.JAM.mcmc.mcmc_pyjam import mcmc  # Importing the provided Mitzkus MCMC module
 
 
 
