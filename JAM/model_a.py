@@ -1,46 +1,145 @@
+# Script to run Model A with JAM and MPI
+# Author: Adapted for Olivia Silcock's project
+# Date: Dec 2023
+
+# IMPORTS =====================
 import numpy as np
 import pickle
-from JAM.JAM.mcmc.mcmc_pyjam import mcmc  # Importing the provided Mitzkus MCMC module
+import emcee
+from schwimmbad import MPIPool
+from jampy.jam_axi_proj import jam_axi_proj
+import sys
 
 
+# FUNCTIONS ===================
+# Parameter boundaries
+def param(pars):
+    inc, beta, mbh, ml = pars
 
+    # Define boundaries
+    inc_bounds = [70, 90]       # Inclination (degrees)
+    beta_bounds = [-0.99, 0.99] # Anisotropy parameter beta
+    mbh_bounds = [0.8, 1.2]     # Black hole mass scaling
+    ml_bounds = [0.5, 5.0]      # Mass-to-light ratio
 
-# ------------------ MAIN SCRIPT -------------------
-if __name__ == "__main__":
-    # Paths
-    data_path = "/home/osilcock/DM_data/kwargs.pkl"  # Update with your data file path
-    output_path = "/fred/oz059/olivia/NGC5102_samples_test.dat"  # Output file
+    # Check if all parameters are within their respective boundaries
+    if (inc_bounds[0] <= inc <= inc_bounds[1] and
+        beta_bounds[0] <= beta <= beta_bounds[1] and
+        mbh_bounds[0] <= mbh <= mbh_bounds[1] and
+        ml_bounds[0] <= ml <= ml_bounds[1]):
+        return True
+    else:
+        return False
 
-    # Load the galaxy data
-    with open(data_path, "rb") as f:
-        galaxy_data = pickle.load(f)
+# Priors
+def priors(pars):
+    """
+    Gaussian priors for the parameters.
+    """
+    inc, beta, mbh, ml = pars
 
-    # Prepare the necessary inputs for the Mitzkus `mcmc` class
-    galaxy = {
-        "lum2d": np.column_stack((galaxy_data["surf_lum"], galaxy_data["sigma_lum"], galaxy_data["qObs_lum"])),
-        "pot2d": np.column_stack((galaxy_data["surf_pot"], galaxy_data["sigma_pot"], galaxy_data["qObs_pot"])),  
-        "distance": galaxy_data["dist"],   # Galaxy distance [Mpc]
-        "rms": galaxy_data["rms"],         # RMS velocity
-        "errRms": galaxy_data["erms"],     # RMS velocity errors
-        "goodbins": galaxy_data["goodbins"],  # Boolean array for good bins
-        "sigmapsf": galaxy_data["sigmapsf"],  # PSF sigma
-        "pixsize": galaxy_data["pixsize"],    # Pixel size [arcsec]
-        "xbin": galaxy_data["xbin"],         # x-coordinates of data points
-        "ybin": galaxy_data["ybin"],         # y-coordinates of data points
-        "name": "NGC5102_ModelA",            # Galaxy name (optional)
-        "burnin": 100,                        # Number of burn-in steps
-        "runStep": 200,                       # Number of steps in the final run
-        "nwalkers": 10,                       # Number of walkers
-        "clip": "noclip",                    # Clipping mode
-        "outfolder": "./",                  # Output folder
-        "fname": "NGC5102_samples_test.dat",   # Output file name
+    # Define priors
+    priors_dict = {
+        "inc": [80, 5],  # Mean 80, sigma 5 for inclination
+        "beta": [0.0, 0.5],  # Mean 0, sigma 0.5 for beta
+        "mbh": [1.0, 0.1],  # Mean 1.0, sigma 0.1 for black hole scaling
+        "ml": [2.0, 1.0],  # Mean 2.0, sigma 1.0 for M/L
     }
 
-    # Instantiate the Mitzkus `mcmc` class with the galaxy data
-    model = mcmc(galaxy)
+    ln_prior = 0.0
+    for value, (mean, sigma) in zip(pars, priors_dict.values()):
+        ln_prior += -0.5 * ((value - mean) / sigma) ** 2
 
-    # Set up the Mass-Follows-Light (MFL) model
-    model.massFollowLight()
+    return ln_prior
 
-    # Outputs are saved automatically in the specified folder and file name.
-    print(f"MCMC completed. Results saved to: {output_path}")
+# JAM likelihood function
+def jam_lnprob(pars):
+    """
+    Combine priors and likelihood for the MCMC sampling.
+    """
+    inc, beta, mbh, ml = pars
+
+    # Check parameter boundaries
+    if not param(pars):
+        return -np.inf
+
+    # Compute priors
+    ln_prior = priors(pars)
+    if not np.isfinite(ln_prior):
+        return -np.inf
+
+    # Run JAM model
+    jam = jam_axi_proj(
+        d["surf_lum"],
+        d["sigma_lum"],
+        d["qObs_lum"],
+        d["surf_pot"] * ml,
+        d["sigma_pot"],
+        d["qObs_pot"],
+        inc,
+        mbh * d["bhm"],
+        d["dist"],
+        d["rot_x"],
+        d["rot_y"],
+        align="cyl",
+        moment="zz",
+        plot=False,
+        pixsize=d["pixsize"],
+        quiet=1,
+        sigmapsf=d["sigmapsf"],
+        normpsf=d["normpsf"],
+        goodbins=d["goodbins"],
+        beta=np.full_like(d["qObs_lum"], beta),
+        data=d["rms"],
+        errors=d["erms"],
+    )
+
+    # Chi-squared computation
+    chi2 = -0.5 * jam.chi2 * len(d["rms"])
+
+    # Combine likelihood and priors
+    return ln_prior + chi2
+
+# MCMC Sampling Function
+def run_mcmc(output_path, ndim=4, nwalkers=20, nsteps=5000):
+    """
+    Run MCMC sampling using emcee.
+    Args:
+        output_path (str): Filepath to save MCMC samples.
+        ndim (int): Number of dimensions.
+        nwalkers (int): Number of walkers.
+        nsteps (int): Number of steps.
+    """
+    # Initialize walkers around a starting point
+    p0 = [
+        [80.0, 0.0, 1.0, 2.0] + 0.01 * np.random.randn(ndim) for _ in range(nwalkers)
+    ]
+
+    with MPIPool() as pool:
+        if not pool.is_master():
+            pool.wait()
+            sys.exit(0)
+
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, jam_lnprob, pool=pool)
+        sampler.run_mcmc(p0, nsteps, progress=True)
+
+    with open(output_path, "wb") as f:
+        pickle.dump(sampler, f)
+
+# MAIN EXECUTION ================================
+if __name__ == "__main__":
+    # CONSTANTS
+    ndim = 4
+    nwalkers = 12
+    nsteps = 1000
+
+    # Paths
+    data_path = "/home/osilcock/DM_data/kwargs.pkl"
+    output_path = "/fred/oz059/olivia/NGC5102_samples.pkl"
+
+    # Load input data
+    with open(data_path, "rb") as f:
+        d = pickle.load(f)
+
+    # Run MCMC
+    run_mcmc(output_path, ndim, nwalkers, nsteps)
