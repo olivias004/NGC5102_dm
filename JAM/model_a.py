@@ -131,7 +131,7 @@ if __name__ == "__main__":
     # CONSTANTS
     ndim = 4
     nwalkers = 100
-    nsteps = 10000
+    nsteps = 5000
 
     # Paths
     data_path = "/home/osilcock/DM_data/kwargs.pkl"
