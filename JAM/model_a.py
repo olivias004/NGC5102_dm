@@ -130,8 +130,8 @@ def run_mcmc(output_path, ndim=4, nwalkers=20, nsteps=5000):
 if __name__ == "__main__":
     # CONSTANTS
     ndim = 4
-    nwalkers = 12
-    nsteps = 1000
+    nwalkers = 100
+    nsteps = 10000
 
     # Paths
     data_path = "/home/osilcock/DM_data/kwargs.pkl"
