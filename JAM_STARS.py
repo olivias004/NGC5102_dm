@@ -1,4 +1,4 @@
-# Script to run Model B with JAM and MPI
+# Script to run Model A with JAM and MPI
 # Author: Adapted for Olivia Silcock's project
 # Date: Dec 2023
 
@@ -14,19 +14,19 @@ import sys
 # FUNCTIONS ===================
 # Parameter boundaries
 def param(pars):
-    inc, beta, mbh, logalpha = pars
+    inc, beta, mbh, ml = pars
 
     # Define boundaries
-    inc_bounds = [80, 90]           # Inclination (degrees)
-    beta_bounds = [-0.99, 0.99]     # Anisotropy parameter beta
-    mbh_bounds = [0.8, 1.2]         # Black hole mass scaling
-    logalpha_bounds = [-0.5, 0.5]   # IMF scaling parameter logalpha
+    inc_bounds = [70, 90]       # Inclination (degrees)
+    beta_bounds = [-0.99, 0.99] # Anisotropy parameter beta
+    mbh_bounds = [0.8, 1.2]     # Black hole mass scaling
+    ml_bounds = [0.5, 5.0]      # Mass-to-light ratio
 
     # Check if all parameters are within their respective boundaries
     if (inc_bounds[0] <= inc <= inc_bounds[1] and
         beta_bounds[0] <= beta <= beta_bounds[1] and
         mbh_bounds[0] <= mbh <= mbh_bounds[1] and
-        logalpha_bounds[0] <= logalpha <= logalpha_bounds[1]):
+        ml_bounds[0] <= ml <= ml_bounds[1]):
         return True
     else:
         return False
@@ -36,14 +36,14 @@ def priors(pars):
     """
     Gaussian priors for the parameters.
     """
-    inc, beta, mbh, logalpha = pars
+    inc, beta, mbh, ml = pars
 
     # Define priors
     priors_dict = {
-        "inc": [85, 5],         # Mean 80, sigma 5 for inclination
-        "beta": [0.0, 0.5],     # Mean 0, sigma 0.5 for beta
-        "mbh": [1.0, 0.1],      # Mean 1.0, sigma 0.1 for black hole scaling
-        "logalpha": [0.0, 0.2], # Mean 0.0, sigma 0.2 for IMF scaling
+        "inc": [80, 5],  # Mean 80, sigma 5 for inclination
+        "beta": [0.0, 0.5],  # Mean 0, sigma 0.5 for beta
+        "mbh": [1.0, 0.1],  # Mean 1.0, sigma 0.1 for black hole scaling
+        "ml": [2.0, 1.0],  # Mean 2.0, sigma 1.0 for M/L
     }
 
     ln_prior = 0.0
@@ -57,7 +57,7 @@ def jam_lnprob(pars):
     """
     Combine priors and likelihood for the MCMC sampling.
     """
-    inc, beta, mbh, logalpha = pars
+    inc, beta, mbh, ml = pars
 
     # Check parameter boundaries
     if not param(pars):
@@ -68,15 +68,12 @@ def jam_lnprob(pars):
     if not np.isfinite(ln_prior):
         return -np.inf
 
-    # Scale surface potential by IMF scaling
-    surf_pot_scaled = d["surf_pot"] * 10 ** logalpha
-
     # Run JAM model
     jam = jam_axi_proj(
         d["surf_lum"],
         d["sigma_lum"],
         d["qObs_lum"],
-        surf_pot_scaled,
+        d["surf_pot"] * ml,
         d["sigma_pot"],
         d["qObs_pot"],
         inc,
@@ -115,7 +112,7 @@ def run_mcmc(output_path, ndim=4, nwalkers=20, nsteps=5000):
     """
     # Initialize walkers around a starting point
     p0 = [
-        [80.0, 0.0, 1.0, 0.0] + 0.01 * np.random.randn(ndim) for _ in range(nwalkers)
+        [80.0, 0.0, 1.0, 2.0] + 0.01 * np.random.randn(ndim) for _ in range(nwalkers)
     ]
 
     with MPIPool() as pool:
@@ -133,12 +130,12 @@ def run_mcmc(output_path, ndim=4, nwalkers=20, nsteps=5000):
 if __name__ == "__main__":
     # CONSTANTS
     ndim = 4
-    nwalkers = 12
-    nsteps = 1000
+    nwalkers = 20
+    nsteps = 10000
 
     # Paths
     data_path = "/home/osilcock/DM_data/kwargs.pkl"
-    output_path = "/fred/oz059/olivia/Model_B.pkl"
+    output_path = "/fred/oz059/olivia/samples.pkl"
 
     # Load input data
     with open(data_path, "rb") as f:
