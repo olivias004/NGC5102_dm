@@ -128,15 +128,15 @@ def run_mcmc_nfw(output_path, ndim, nwalkers, nsteps):
 
 # Main execution block
 if __name__ == "__main__":
-    output_path = "/path/to/your/output/file.pkl"
+    output_path = "/fred/oz059/olivia/samples.pkl"
     ndim = 6  # incl, beta, mbh, ml, Rs, p0
     nwalkers = 20
     nsteps = 100
 
     # Load your data
-    with open("/path/to/your/data/kwargs.pkl", "rb") as f:
+    with open("/home/osilcock/DM_NFW_data/kwargs.pkl", "rb") as f:
         d = pickle.load(f)
-
+        
     # Run MCMC
     run_mcmc_nfw(output_path, ndim, nwalkers, nsteps)
     print("MCMC sampling completed and saved!")
