@@ -285,7 +285,7 @@ inc = 87.5
 surf_total = m.sol[0, :] / (2. * np.pi * m.sol[1, :]**2 * m.sol[2, :]) #total counts to 
 sigma_total = m.sol[1, :] * HST_SCALE #arcseconds
 qobs_total = m.sol[2, :]
-print(qobs)
+
 
 
 og_mass = mge_radial_mass(surface_density, sigma_arcsec, q, inc, rad, dist)

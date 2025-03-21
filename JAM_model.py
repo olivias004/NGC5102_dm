@@ -38,7 +38,7 @@ from pafit.fit_kinematic_pa import fit_kinematic_pa
 
 #CONSTANTS======================================
 #strings
-data_path = '/Users/livisilcock/Documents/PROJECTS/NGC5102/files/Model_B/'
+data_path = '/Users/livisilcock/Documents/PROJECTS/NGC5102/files/JAM_STARS/'
 kwargs = data_path + 'kwargs.pkl'
 chain_results = data_path + 'chain_results.csv'
 
@@ -117,7 +117,7 @@ sigma_value = header['SEEING']
 plt.figure(figsize=(15,15))
 
 jam = jam_axi_proj(surf_lum, sigma_lum, qObs_lum, surf_pot, sigma_pot, qObs_pot,
-			inc0, bh0, dist, rot_x, rot_y, align='cyl', moment='zz', plot=False, pixsize=pixsize,
+			inc0, bh0, dist, rot_x, rot_y, align='cyl', moment='zz', plot=True, pixsize=pixsize,
 			quiet=1, sigmapsf=sigmapsf, normpsf=normpsf, goodbins=goodbins,
 			beta=numpy.full_like(qObs_lum, beta0), data=rms, errors=erms, ml=1)
 
@@ -147,7 +147,8 @@ ax2.set_xlabel("$x\, \, [\mathrm{arcsec}]$")
 ax2.annotate("%.2f"%jam.chi2, (-15, 15), fontsize = 16)
 cbar = plt.colorbar(im, cax = cax)
 
-plt.savefig("/Users/livisilcock/Documents/PROJECTS/NGC5102/files/final_JAM/observed_vs_model.png", bbox_inches = "tight")
+#plt.show()
+plt.savefig(data_path + 'model_comparison.png', bbox_inches = "tight")
 plt.close()
 
 
