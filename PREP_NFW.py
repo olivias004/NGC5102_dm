@@ -3,7 +3,7 @@
 #date: Dec 2023
 
 import pickle
-import numpy as np
+import numpy
 from astropy.io import fits
 from math import acos
 from pafit.fit_kinematic_pa import fit_kinematic_pa
@@ -94,7 +94,7 @@ def prep_data(lum_mge_path, pot_mge_path, kin_data_path, output_path):
 	ml_bounds = [0.1, 10]
 
 	# NFW radius
-	NFW_radius = np.linspace(1e-2, 500, 1000)
+	NFW_radius = numpy.linspace(1e-2, 500, 1000)
 
 
 	#pulling in all the below values

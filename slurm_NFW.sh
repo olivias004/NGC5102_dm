@@ -15,5 +15,5 @@ ml gcc/12.2.0
 ml openmpi/4.1.4
 source activate NGC5102
 
-mpirun -n 20  python JAM/model_a.py
+mpirun -n 20  python JAM_NFW.py
 
