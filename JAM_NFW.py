@@ -7,6 +7,7 @@ import numpy as np
 import emcee
 import pickle
 from jampy.jam_axi_proj import jam_axi_proj
+from mgefit.mge_fit_1d import mge_fit_1d
 from schwimmbad import MPIPool
 import sys
 
