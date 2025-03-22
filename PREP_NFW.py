@@ -92,6 +92,8 @@ def prep_data(lum_mge_path, pot_mge_path, kin_data_path, output_path):
 	beta_bounds = [-1, 1]
 	mbh_bounds = [0.8, 1.2]
 	ml_bounds = [0.1, 10]
+	Rs_bounds = [500, 1250]
+	p0_bounds = [0.25,1.5]
 
 	# NFW radius
 	NFW_radius = numpy.linspace(1e-2, 500, 1000)
@@ -128,7 +130,9 @@ def prep_data(lum_mge_path, pot_mge_path, kin_data_path, output_path):
 			'bhm': bhm,
 			'Rs_range': Rs_range,
 			'p0_range': p0_range,
-			'arcsec_to_pc': arcsec_to_pc
+			'arcsec_to_pc': arcsec_to_pc,
+			'Rs_bounds': Rs_bounds,
+			'p0_bounds': p0_bounds
 			}
 	
 	with open(output_path, 'wb') as f:

@@ -18,7 +18,7 @@ def mge_pot(Rs, p0, arcsec_to_pc):
     r = np.linspace(0.1, r_max, 50)  # Linear scale
 
     # Convert radius to parsecs
-    r_parsec = r * arcsec_to_pc
+    r_parsec = r * d['arcsec_to_pc']
 
     # Intrinsic density - M_sun/pc^3
     R = r_parsec / Rs
@@ -41,7 +41,7 @@ def mge_pot(Rs, p0, arcsec_to_pc):
     sigma = p.sol[1, :]
 
     # Convert sigma to arcsec
-    sigma = sigma / arcsec_to_pc
+    sigma = sigma / d['arcsec_to_pc']
 
     qobs = np.ones_like(surf)
     return surf, sigma, qobs
@@ -65,7 +65,7 @@ def jam_nfw_lnprob(pars):
     	return -np.inf
 
     # Compute DM MGE component
-    surf_dm, sigma_dm, qobs_dm = mge_pot(Rs, p0, arcsec_to_pc)
+    surf_dm, sigma_dm, qobs_dm = mge_pot(Rs, p0, d['arcsec_to_pc'])
 
     # Combine with stellar components
     try:
