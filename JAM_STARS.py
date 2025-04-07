@@ -95,10 +95,10 @@ def jam_lnprob(pars):
     )
 
     # Chi-squared computation
-    chi2 = -0.5 * jam.chi2 * len(d["rms"])
+    return -0.5 * jam.chi2 * len(d["rms"])
 
-    # Combine likelihood and priors
-    return ln_prior + chi2
+    # # Combine likelihood and priors
+    # return ln_prior + chi2
 
 # MCMC Sampling Function
 def run_mcmc(output_path, ndim=4, nwalkers=20, nsteps=5000):
