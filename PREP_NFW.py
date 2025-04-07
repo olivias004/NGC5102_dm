@@ -89,14 +89,11 @@ def prep_data(lum_mge_path, pot_mge_path, kin_data_path, output_path):
 
 	#bounds
 	inc_bounds = [incmin, 90]
-	beta_bounds = [-1, 1]
+	beta_bounds = [-0.99, 0.99]
 	mbh_bounds = [0.8, 1.2]
 	ml_bounds = [0.1, 10]
-	Rs_bounds = [500, 1250]
-	p0_bounds = [0.25,1.5]
-
-	# NFW radius
-	NFW_radius = numpy.linspace(1e-2, 500, 1000)
+	Rs_bounds = [500, 5000]
+	p0_bounds = [0.01,2.0]
 
 
 	#pulling in all the below values

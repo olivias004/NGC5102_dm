@@ -12,20 +12,25 @@ from schwimmbad import MPIPool
 import sys
 
 # FUNCTIONS =================
+# Log-normal prior helper
+def prior_log_normal(x, mu, sigma):
+    if x <= 0:
+        return -np.inf
+    return -0.5 * ((np.log(x) - mu) / sigma) ** 2
+
 # mge pot
 def mge_pot(Rs, p0, arcsec_to_pc):
-    # Ensure max(r) is at least Rs
-    r_max = max(500, 1.2 * Rs)  # Scale dynamically with Rs
-    r = np.linspace(0.1, r_max, 50)  # Linear scale
+    r_max = max(500, 1.2 * Rs)  # Dynamically adjust max radius
+    r = np.linspace(0.1, r_max, 50)  # Linear sampling
 
     # Convert radius to parsecs
     r_parsec = r * d['arcsec_to_pc']
 
-    # Intrinsic density - M_sun/pc^3
+    # NFW density profile
     R = r_parsec / Rs
     intrinsic_density = p0 / (R * ((1 + R) ** 2))
 
-    # 1D MGE process
+    # Fit 1D MGE
     p = mge_fit_1d(
         r_parsec, intrinsic_density,
         negative=False,
@@ -37,21 +42,16 @@ def mge_pot(Rs, p0, arcsec_to_pc):
         plot=True
     )
 
-    # Outputs
     surf = p.sol[0, :]
-    sigma = p.sol[1, :]
-
-    # Convert sigma to arcsec
-    sigma = sigma / d['arcsec_to_pc']
-
+    sigma = p.sol[1, :] / d['arcsec_to_pc']
     qobs = np.ones_like(surf)
     return surf, sigma, qobs
 
-# Define the likelihood function including the NFW component
+# JAM likelihood with NFW
 def jam_nfw_lnprob(pars):
     inc, beta, mbh, ml, Rs, p0 = pars
 
-    # Check parameter bounds
+    # Bound checks
     if not (d['inc_bounds'][0] < inc < d['inc_bounds'][1]):
         return -np.inf
     if not (d['beta_bounds'][0] < beta < d['beta_bounds'][1]):
@@ -61,58 +61,64 @@ def jam_nfw_lnprob(pars):
     if not (d['ml_bounds'][0] < ml < d['ml_bounds'][1]):
         return -np.inf
     if not (d['Rs_bounds'][0] < Rs < d['Rs_bounds'][1]):
-    	return -np.inf
+        return -np.inf
     if not (d['p0_bounds'][0] < p0 < d['p0_bounds'][1]):
-    	return -np.inf
+        return -np.inf
 
-    # Compute DM MGE component
-    surf_dm, sigma_dm, qobs_dm = mge_pot(Rs, p0, d['arcsec_to_pc'])
+    # Log-normal priors for Rs and p0
+    ln_prior = (
+        prior_log_normal(Rs, mu=np.log(2000), sigma=0.5) +
+        prior_log_normal(p0, mu=np.log(0.2), sigma=1.0)
+    )
 
-    # Combine with stellar components
+    if not np.isfinite(ln_prior):
+        return -np.inf
+
+    # DM potential component
     try:
+        surf_dm, sigma_dm, qobs_dm = mge_pot(Rs, p0, d['arcsec_to_pc'])
         combined_surface_density = np.concatenate((d['surf_pot'], surf_dm))
         combined_sigma = np.concatenate((d['sigma_pot'], sigma_dm))
         combined_q = np.concatenate((d['qObs_pot'], qobs_dm))
+    except Exception as e:
+        print(f"Error in MGE construction: {e}")
+        return -np.inf
 
-    except NameError:
-        print("Data variables not defined.")
-        return np.inf
-
-    # Run JAM model with ml set
+    # Run JAM model
     jam_result = jam_axi_proj(
-       		d["surf_lum"], 
-       		d["sigma_lum"], 
-       		d["qObs_lum"], 
-       		combined_surface_density * ml,
-        	combined_sigma, 
-        	combined_q, 
-        	inc, 
-        	mbh * d["bhm"], 
-        	d["dist"],
-        	d["rot_x"], 
-        	d["rot_y"], 
-        	align="cyl", 
-        	moment="zz", 
-        	plot=False,
-        	pixsize=d["pixsize"], 
-        	quiet=1, 
-        	sigmapsf=d["sigmapsf"], 
-        	normpsf=d["normpsf"],
-        	goodbins=d['goodbins'], 
-        	beta=np.full_like(d["qObs_lum"], beta),
-        	data=d['rms'], 
-        	errors=d['erms'], 
-        	ml=1
+        d["surf_lum"],
+        d["sigma_lum"],
+        d["qObs_lum"],
+        combined_surface_density * ml,
+        combined_sigma,
+        combined_q,
+        inc,
+        mbh * d["bhm"],
+        d["dist"],
+        d["rot_x"],
+        d["rot_y"],
+        align="cyl",
+        moment="zz",
+        plot=False,
+        pixsize=d["pixsize"],
+        quiet=1,
+        sigmapsf=d["sigmapsf"],
+        normpsf=d["normpsf"],
+        goodbins=d['goodbins'],
+        beta=np.full_like(d["qObs_lum"], beta),
+        data=d['rms'],
+        errors=d['erms'],
+        ml=1
     )
-    
-    chi2 = -0.5 * jam_result.chi2 * len(d['rms'])
-    return chi2
 
-# Function to run MCMC
+    chi2 = -0.5 * jam_result.chi2 * len(d['rms'])
+    return ln_prior + chi2
+
+# MCMC runner
 def run_mcmc_nfw(output_path, ndim, nwalkers, nsteps):
-    # Starting parameter guesses
     p0 = [
-        [88, -0.1, 1.0, 3.3, 500, 0.5] + 0.01 * np.random.randn(ndim) for _ in range(nwalkers)
+        [88, -0.1, 1.0, 3.3, 1000, 0.75] + 0.01 * np.random.randn(ndim)
+        for _ in range(nwalkers)
     ]
 
     with MPIPool() as pool:
@@ -120,24 +126,31 @@ def run_mcmc_nfw(output_path, ndim, nwalkers, nsteps):
             pool.wait()
             sys.exit(0)
 
+        print("Starting MCMC...")
         sampler = emcee.EnsembleSampler(nwalkers, ndim, jam_nfw_lnprob, pool=pool)
         sampler.run_mcmc(p0, nsteps, progress=True)
 
-    # Save the results
+    print("Saving results...")
     with open(output_path, "wb") as f:
         pickle.dump(sampler, f)
 
-# Main execution block
+# MAIN ======================
 if __name__ == "__main__":
     output_path = "/fred/oz059/olivia/samples.pkl"
-    ndim = 6  # incl, beta, mbh, ml, Rs, p0
+    ndim = 6
     nwalkers = 20
-    nsteps = 100
+    nsteps = 100  # Suggest 500–1000 for real run
 
-    # Load your data
     with open("/home/osilcock/DM_NFW_data/kwargs.pkl", "rb") as f:
         d = pickle.load(f)
-        
-    # Run MCMC
+
+    # Set physical bounds (edit here as needed)
+    d["inc_bounds"] = [70, 90]
+    d["beta_bounds"] = [-0.99, 0.99]
+    d["mbh_bounds"] = [0.8, 1.2]
+    d["ml_bounds"] = [0.5, 5.0]
+    d["Rs_bounds"] = [500, 5000]      # pc
+    d["p0_bounds"] = [0.01, 2.0]      # M_sun / pc^3
+
     run_mcmc_nfw(output_path, ndim, nwalkers, nsteps)
     print("MCMC sampling completed and saved!")
