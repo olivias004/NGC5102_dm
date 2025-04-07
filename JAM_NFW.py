@@ -112,7 +112,7 @@ def jam_nfw_lnprob(pars):
     )
 
     chi2 = -0.5 * jam_result.chi2 * len(d['rms'])
-    return ln_prior + chi2
+    return chi2 # + ln_prior
 
 # MCMC runner
 def run_mcmc_nfw(output_path, ndim, nwalkers, nsteps):
