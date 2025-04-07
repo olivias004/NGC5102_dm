@@ -138,13 +138,13 @@ def run_mcmc_nfw(output_path, ndim, nwalkers, nsteps):
 if __name__ == "__main__":
     output_path = "/fred/oz059/olivia/samples.pkl"
     ndim = 6
-    nwalkers = 30        # Slightly more walkers = better exploration
-    nsteps = 500         # Enough to see convergence trends and test bounds
+    nwalkers = 20        # Slightly more walkers = better exploration
+    nsteps = 500        # Enough to see convergence trends and test bounds
 
 
     with open("/home/osilcock/DM_NFW_data/kwargs.pkl", "rb") as f:
         d = pickle.load(f)
 
-
+    print(f"Running EMCEE with {nsteps} steps, {nwalkers} walkers, {ndim} parameters.")
     run_mcmc_nfw(output_path, ndim, nwalkers, nsteps)
     print("MCMC sampling completed and saved!")
