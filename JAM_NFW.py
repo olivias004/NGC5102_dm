@@ -138,19 +138,13 @@ def run_mcmc_nfw(output_path, ndim, nwalkers, nsteps):
 if __name__ == "__main__":
     output_path = "/fred/oz059/olivia/samples.pkl"
     ndim = 6
-    nwalkers = 20
-    nsteps = 100  # Suggest 500–1000 for real run
+    nwalkers = 30        # Slightly more walkers = better exploration
+    nsteps = 500         # Enough to see convergence trends and test bounds
+
 
     with open("/home/osilcock/DM_NFW_data/kwargs.pkl", "rb") as f:
         d = pickle.load(f)
 
-    # Set physical bounds (edit here as needed)
-    d["inc_bounds"] = [70, 90]
-    d["beta_bounds"] = [-0.99, 0.99]
-    d["mbh_bounds"] = [0.8, 1.2]
-    d["ml_bounds"] = [0.5, 5.0]
-    d["Rs_bounds"] = [500, 5000]      # pc
-    d["p0_bounds"] = [0.01, 2.0]      # M_sun / pc^3
 
     run_mcmc_nfw(output_path, ndim, nwalkers, nsteps)
     print("MCMC sampling completed and saved!")

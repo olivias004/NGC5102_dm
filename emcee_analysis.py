@@ -17,13 +17,13 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 tau0 = [35.67234921, 33.97927069, 39.61699091, 42.27054764]
 labels = ["inclination", "anisotropy", "black hole mass", "mass to light ratio"]
 
-output_path = '/Users/livisilcock/Documents/PROJECTS/NGC5102/files/JAM_STARS/'
+output_path = '/Users/livisilcock/Documents/PROJECTS/NGC5102/files/JAM_NFW/'
 NGC5102_samples = output_path + 'samples.pkl'
 
 
 #FUNCTIONS=======================================
 #determine chi2
-def jam_lnprob(pars):
+def jam_nfw_lnprob(pars):
     """
     Args:
     pars: the starting point for the emcee process
