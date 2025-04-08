@@ -139,7 +139,7 @@ if __name__ == "__main__":
     output_path = "/fred/oz059/olivia/NFW_samples.pkl"
     ndim = 6
     nwalkers = 20        # Slightly more walkers = better exploration
-    nsteps = 500
+    nsteps = 100
 
 
     with open("/home/osilcock/DM_NFW_data/kwargs.pkl", "rb") as f:
