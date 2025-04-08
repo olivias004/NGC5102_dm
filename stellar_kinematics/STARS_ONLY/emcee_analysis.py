@@ -128,11 +128,11 @@ for i in range(n_params):  # Loop over each parameter
 axes[-1].set_xlabel("Step number")
 plt.show()
 # plt.savefig(output_path + 'walkers.png', bbox_inches = "tight")
-# plt.close()
 
 
 #plot corner plot: the input sample must be 1- or 2-D.
 fig = corner.corner(samples, labels=labels)
+# plt.close()
 plt.show()
 # plt.savefig(output_path + 'MCMC_corner.png', bbox_inches = "tight")
 # plt.close()
@@ -184,4 +184,11 @@ plt.show()
 # Optionally save the figure
 # plt.savefig(output_path + 'walkers.png', bbox_inches = "tight")
 # plt.close()
+
+
+
+
+
+
+
 
