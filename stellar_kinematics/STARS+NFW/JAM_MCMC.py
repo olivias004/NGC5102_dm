@@ -19,6 +19,8 @@ def prior_log_normal(x, mu, sigma):
     return -0.5 * ((np.log(x) - mu) / sigma) ** 2
 
 def mge_pot(Rs, p0, arcsec_to_pc):
+    Rs = 10**Rs
+    p0 = 10**p0
     r_max = max(500, 1.2 * Rs)  # Rs in arcsec
     r = np.logspace(np.log10(0.1), np.log10(r_max), 50)  # Log-spaced in arcsec
 
@@ -38,9 +40,10 @@ def mge_pot(Rs, p0, arcsec_to_pc):
         plot=True
     )
 
-    surf = p.sol[0, :]
-    sigma = p.sol[1, :] / arcsec_to_pc
-    qobs = np.ones_like(surf)
+    sigma_pc = p.sol[1, :]                 # in parsec
+    sigma_arcsec = sigma_pc / arcsec_to_pc
+    surf_mass = p.sol[0, :] / (2 * np.pi * sigma_pc**2 * 1)  # qobs = 1
+    qobs = np.ones_like(surf_mass)
     return surf, sigma, qobs
 
 # JAM likelihood with NFW
@@ -56,9 +59,9 @@ def jam_nfw_lnprob(pars):
         return -np.inf
     if not (d['ml_bounds'][0] < ml < d['ml_bounds'][1]):
         return -np.inf
-    if not (d['Rs_bounds'][0] < Rs < d['Rs_bounds'][1]):
+    if not (3.0< Rs < 3.5):
         return -np.inf
-    if not (d['p0_bounds'][0] < p0 < d['p0_bounds'][1]):
+    if not (-2.5 < p0 < 0):
         return -np.inf
 
     # # Log-normal priors for Rs and p0
@@ -141,7 +144,7 @@ if __name__ == "__main__":
     output_path = "/fred/oz059/olivia/NFW_samples.pkl"
     ndim = 6
     nwalkers = 20        # Slightly more walkers = better exploration
-    nsteps = 300
+    nsteps = 1000
 
 
     with open("/home/osilcock/DM_NFW_data/kwargs.pkl", "rb") as f:
