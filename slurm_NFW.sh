@@ -6,7 +6,7 @@
 #SBATCH --job-name=initial_chain
 #SBATCH --mail-user=oliviarose004@protonmail.com
 #SBATCH --mail-type=ALL
-#SBATCH --mem-per-cpu=500
+#SBATCH --mem=32G
 #SBATCH --time=010:00:00
 #SBATCH --account=oz059
 

@@ -17,7 +17,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 tau0 = [35.67234921, 33.97927069, 39.61699091, 42.27054764]
 labels = ["inclination", "anisotropy", "black hole mass", "mass to light ratio"]
 
-output_path = '/Users/livisilcock/Documents/PROJECTS/NGC5102/files/JAM_NFW/'
+output_path = '/Users/livisilcock/Documents/PROJECTS/NGC5102/files/JAM_STARS/'
 NGC5102_samples = output_path + 'samples.pkl'
 
 
@@ -184,15 +184,4 @@ plt.show()
 # Optionally save the figure
 # plt.savefig(output_path + 'walkers.png', bbox_inches = "tight")
 # plt.close()
-
-
-
-
-
-
-
-
-
-
-
 
