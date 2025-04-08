@@ -13,10 +13,10 @@ import sys
 
 # FUNCTIONS =================
 # Log-normal prior helper
-def prior_log_normal(x, mu, sigma):
-    if x <= 0:
-        return -np.inf
-    return -0.5 * ((np.log(x) - mu) / sigma) ** 2
+# def prior_log_normal(x, mu, sigma):
+#     if x <= 0:
+#         return -np.inf
+#     return -0.5 * ((np.log(x) - mu) / sigma) ** 2
 
 # mge pot
 def mge_pot(Rs, p0, arcsec_to_pc):
@@ -66,13 +66,13 @@ def jam_nfw_lnprob(pars):
         return -np.inf
 
     # # Log-normal priors for Rs and p0
-    ln_prior = (
-        prior_log_normal(Rs, mu=np.log(2000), sigma=0.5) +
-        prior_log_normal(p0, mu=np.log(0.2), sigma=1.0)
-    )
+    # ln_prior = (
+    #     prior_log_normal(Rs, mu=np.log(2000), sigma=0.5) +
+    #     prior_log_normal(p0, mu=np.log(0.2), sigma=1.0)
+    # )
 
-    if not np.isfinite(ln_prior):
-        return -np.inf
+    # if not np.isfinite(ln_prior):
+    #     return -np.inf
 
     # DM potential component
     try:
@@ -112,7 +112,7 @@ def jam_nfw_lnprob(pars):
     )
 
     chi2 = -0.5 * jam_result.chi2 * len(d['rms'])
-    return chi2  + ln_prior
+    return chi2 # + ln_prior
 
 # MCMC runner
 def run_mcmc_nfw(output_path, ndim, nwalkers, nsteps):
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     output_path = "/fred/oz059/olivia/NFW_samples.pkl"
     ndim = 6
     nwalkers = 20        # Slightly more walkers = better exploration
-    nsteps = 300
+    nsteps = 500
 
 
     with open("/home/osilcock/DM_NFW_data/kwargs.pkl", "rb") as f:
