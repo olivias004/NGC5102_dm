@@ -18,19 +18,15 @@ def prior_log_normal(x, mu, sigma):
         return -np.inf
     return -0.5 * ((np.log(x) - mu) / sigma) ** 2
 
-# mge pot
 def mge_pot(Rs, p0, arcsec_to_pc):
-    r_max = max(500, 1.2 * Rs)  # Dynamically adjust max radius
-    r = np.linspace(0.1, r_max, 50)  # Linear sampling
+    r_max = max(500, 1.2 * Rs)  # Rs in arcsec
+    r = np.logspace(np.log10(0.1), np.log10(r_max), 50)  # Log-spaced in arcsec
 
-    # Convert radius to parsecs
-    r_parsec = r * d['arcsec_to_pc']
+    r_parsec = r * arcsec_to_pc
+    R = r / Rs  # Unitless
 
-    # NFW density profile
-    R = r_parsec / Rs
-    intrinsic_density = p0 / (R * ((1 + R) ** 2))
+    intrinsic_density = p0 / (R * (1 + R)**2)
 
-    # Fit 1D MGE
     p = mge_fit_1d(
         r_parsec, intrinsic_density,
         negative=False,
@@ -43,7 +39,7 @@ def mge_pot(Rs, p0, arcsec_to_pc):
     )
 
     surf = p.sol[0, :]
-    sigma = p.sol[1, :] / d['arcsec_to_pc']
+    sigma = p.sol[1, :] / arcsec_to_pc
     qobs = np.ones_like(surf)
     return surf, sigma, qobs
 
@@ -89,7 +85,7 @@ def jam_nfw_lnprob(pars):
         d["surf_lum"],
         d["sigma_lum"],
         d["qObs_lum"],
-        combined_surface_density * ml,
+        combined_surface_density,
         combined_sigma,
         combined_q,
         inc,
@@ -108,7 +104,7 @@ def jam_nfw_lnprob(pars):
         beta=np.full_like(d["qObs_lum"], beta),
         data=d['rms'],
         errors=d['erms'],
-        ml=1
+        ml=ml
     )
 
     chi2 = -0.5 * jam_result.chi2 * len(d['rms'])
@@ -116,10 +112,16 @@ def jam_nfw_lnprob(pars):
 
 # MCMC runner
 def run_mcmc_nfw(output_path, ndim, nwalkers, nsteps):
-    p0 = [
-        [88, -0.1, 1.0, 3.3, 1000, 0.75] + 0.01 * np.random.randn(ndim)
-        for _ in range(nwalkers)
-    ]
+    # Generate uniform initial positions for each parameter
+    p0 = []
+    for _ in range(nwalkers):
+        inc  = np.random.uniform(*d['inc_bounds'])
+        beta = np.random.uniform(*d['beta_bounds'])
+        mbh  = np.random.uniform(*d['mbh_bounds'])
+        ml   = np.random.uniform(*d['ml_bounds'])
+        Rs   = np.random.uniform(*d['Rs_bounds'])
+        p0dm = np.random.uniform(*d['p0_bounds'])  # renamed to avoid conflict with p0 (list of walkers)
+        p0.append([inc, beta, mbh, ml, Rs, p0dm])
 
     with MPIPool() as pool:
         if not pool.is_master():
