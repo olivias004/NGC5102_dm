@@ -18,17 +18,19 @@ def prior_log_normal(x, mu, sigma):
         return -np.inf
     return -0.5 * ((np.log(x) - mu) / sigma) ** 2
 
+# mge pot
 def mge_pot(Rs, p0, arcsec_to_pc):
-    Rs = 10**Rs
-    p0 = 10**p0
-    r_max = max(500, 1.2 * Rs)  # Rs in arcsec
-    r = np.logspace(np.log10(0.1), np.log10(r_max), 50)  # Log-spaced in arcsec
+    r_max = max(500, 1.2 * Rs)  # Dynamically adjust max radius
+    r = np.linspace(0.1, r_max, 50)  # Linear sampling
 
-    r_parsec = r * arcsec_to_pc
-    R = r / Rs  # Unitless
+    # Convert radius to parsecs
+    r_parsec = r * d['arcsec_to_pc']
 
-    intrinsic_density = p0 / (R * (1 + R)**2)
+    # NFW density profile
+    R = r_parsec / Rs
+    intrinsic_density = p0 / (R * ((1 + R) ** 2))
 
+    # Fit 1D MGE
     p = mge_fit_1d(
         r_parsec, intrinsic_density,
         negative=False,
@@ -40,11 +42,10 @@ def mge_pot(Rs, p0, arcsec_to_pc):
         plot=True
     )
 
-    sigma_pc = p.sol[1, :]                 # in parsec
-    sigma_arcsec = sigma_pc / arcsec_to_pc
-    surf_mass = p.sol[0, :] / (2 * np.pi * sigma_pc**2 * 1)  # qobs = 1
-    qobs = np.ones_like(surf_mass)
-    return surf_mass, sigma_arcsec, qobs
+    surf = p.sol[0, :]
+    sigma = p.sol[1, :] / d['arcsec_to_pc']
+    qobs = np.ones_like(surf)
+    return surf, sigma, qobs
 
 # JAM likelihood with NFW
 def jam_nfw_lnprob(pars):
@@ -88,7 +89,7 @@ def jam_nfw_lnprob(pars):
         d["surf_lum"],
         d["sigma_lum"],
         d["qObs_lum"],
-        combined_surface_density,
+        combined_surface_density * ml,
         combined_sigma,
         combined_q,
         inc,
@@ -107,7 +108,7 @@ def jam_nfw_lnprob(pars):
         beta=np.full_like(d["qObs_lum"], beta),
         data=d['rms'],
         errors=d['erms'],
-        ml=ml
+        ml=1
     )
 
     chi2 = -0.5 * jam_result.chi2 * len(d['rms'])
@@ -115,7 +116,6 @@ def jam_nfw_lnprob(pars):
 
 # MCMC runner
 def run_mcmc_nfw(output_path, ndim, nwalkers, nsteps):
-    # Generate uniform initial positions for each parameter
     p0 = [
         [88, -0.1, 1.0, 3.3, 1000, 0.75] + 0.01 * np.random.randn(ndim)
         for _ in range(nwalkers)
@@ -128,7 +128,7 @@ def run_mcmc_nfw(output_path, ndim, nwalkers, nsteps):
 
         print("Starting MCMC...")
         sampler = emcee.EnsembleSampler(nwalkers, ndim, jam_nfw_lnprob, pool=pool)
-        sampler.run_mcmc(p0, nsteps, progress=False)
+        sampler.run_mcmc(p0, nsteps, progress=True)
 
     print("Saving results...")
     with open(output_path, "wb") as f:
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     output_path = "/fred/oz059/olivia/NFW_samples.pkl"
     ndim = 6
     nwalkers = 20        # Slightly more walkers = better exploration
-    nsteps = 1000
+    nsteps = 300
 
 
     with open("/home/osilcock/DM_NFW_data/kwargs.pkl", "rb") as f:
