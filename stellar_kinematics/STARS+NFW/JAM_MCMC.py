@@ -116,15 +116,10 @@ def jam_nfw_lnprob(pars):
 # MCMC runner
 def run_mcmc_nfw(output_path, ndim, nwalkers, nsteps):
     # Generate uniform initial positions for each parameter
-    p0 = []
-    for _ in range(nwalkers):
-        inc  = np.random.uniform(*d['inc_bounds'])
-        beta = np.random.uniform(*d['beta_bounds'])
-        mbh  = np.random.uniform(*d['mbh_bounds'])
-        ml   = np.random.uniform(*d['ml_bounds'])
-        Rs   = np.random.uniform(*d['Rs_bounds'])
-        p0dm = np.random.uniform(*d['p0_bounds'])  # renamed to avoid conflict with p0 (list of walkers)
-        p0.append([inc, beta, mbh, ml, Rs, p0dm])
+    p0 = [
+        [88, -0.1, 1.0, 3.3, 1000, 0.75] + 0.01 * np.random.randn(ndim)
+        for _ in range(nwalkers)
+    ]
 
     with MPIPool() as pool:
         if not pool.is_master():
@@ -133,7 +128,7 @@ def run_mcmc_nfw(output_path, ndim, nwalkers, nsteps):
 
         print("Starting MCMC...")
         sampler = emcee.EnsembleSampler(nwalkers, ndim, jam_nfw_lnprob, pool=pool)
-        sampler.run_mcmc(p0, nsteps, progress=True)
+        sampler.run_mcmc(p0, nsteps, progress=False)
 
     print("Saving results...")
     with open(output_path, "wb") as f:
