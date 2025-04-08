@@ -44,7 +44,7 @@ def mge_pot(Rs, p0, arcsec_to_pc):
     sigma_arcsec = sigma_pc / arcsec_to_pc
     surf_mass = p.sol[0, :] / (2 * np.pi * sigma_pc**2 * 1)  # qobs = 1
     qobs = np.ones_like(surf_mass)
-    return surf, sigma, qobs
+    return surf_mass, sigma_arcsec, qobs
 
 # JAM likelihood with NFW
 def jam_nfw_lnprob(pars):
@@ -59,9 +59,9 @@ def jam_nfw_lnprob(pars):
         return -np.inf
     if not (d['ml_bounds'][0] < ml < d['ml_bounds'][1]):
         return -np.inf
-    if not (3.0< Rs < 3.5):
+    if not (d['Rs_bounds'][0] < Rs < d['Rs_bounds'][1]):
         return -np.inf
-    if not (-2.5 < p0 < 0):
+    if not (d['p0_bounds'][0] < p0 < d['p0_bounds'][1]):
         return -np.inf
 
     # # Log-normal priors for Rs and p0

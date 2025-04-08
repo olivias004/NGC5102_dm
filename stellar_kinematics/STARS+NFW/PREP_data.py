@@ -92,8 +92,8 @@ def prep_data(lum_mge_path, pot_mge_path, kin_data_path, output_path):
 	beta_bounds = [-0.99, 0.99]
 	mbh_bounds = [0.8, 1.2]
 	ml_bounds = [0.1, 10]
-	Rs_bounds = [500, 5000]
-	p0_bounds = [0.01,2.0]
+	Rs_bounds = [3.0, 3.5]
+	p0_bounds = [-2.5,0]
 
 
 	#pulling in all the below values
